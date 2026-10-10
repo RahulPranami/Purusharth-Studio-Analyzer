@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: purusharth-selfie-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: R2_ACCOUNT_ID
+        value: c5b183bb011ad958f341adda9e499c13
+      - key: R2_BUCKET_NAME
+        value: purusharth-studio
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: FACE_ENGINE_TYPE
+        value: insightface
+      - key: MATCH_SIMILARITY_THRESHOLD
+        value: "0.45"
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8000"
