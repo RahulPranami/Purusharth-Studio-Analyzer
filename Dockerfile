@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Install system libraries for OpenCV and ONNX
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Upgrade pip to latest version
+RUN pip install --no-cache-dir --upgrade pip
 
 # Install Python requirements
 COPY requirements.txt .
