@@ -232,6 +232,11 @@ def process_single_r2_object(
         model_version=engine.model_version,
     )
 
+    del image_bytes
+    del pil_img
+    import gc
+    gc.collect()
+
     return IndexObjectResponse(
         object_key=safe_key,
         status=status_str,

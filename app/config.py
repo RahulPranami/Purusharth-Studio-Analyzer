@@ -42,13 +42,14 @@ class Settings(BaseSettings):
 
     # Face Engine Configuration
     face_engine_type: str = Field(default="insightface", alias="FACE_ENGINE_TYPE")
-    match_similarity_threshold: float = Field(default=0.45, alias="MATCH_SIMILARITY_THRESHOLD")
+    insightface_model_name: str = Field(default="buffalo_s", alias="INSIGHTFACE_MODEL_NAME")
+    match_similarity_threshold: float = Field(default=0.40, alias="MATCH_SIMILARITY_THRESHOLD")
 
     # Safety & Constraints
     max_image_size_bytes: int = Field(default=15 * 1024 * 1024, alias="MAX_IMAGE_SIZE_BYTES")  # 15MB
     max_image_dimension: int = Field(default=4096, alias="MAX_IMAGE_DIMENSION")
     min_image_dimension: int = Field(default=32, alias="MIN_IMAGE_DIMENSION")
-    max_batch_concurrency: int = Field(default=5, alias="MAX_BATCH_CONCURRENCY")
+    max_batch_concurrency: int = Field(default=2, alias="MAX_BATCH_CONCURRENCY")
 
     # Server & Networking
     api_host: str = Field(default="0.0.0.0", alias="API_HOST")

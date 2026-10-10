@@ -142,7 +142,7 @@
           </div>
           <div class="form-group" style="flex: 1;">
             <label>Similarity Threshold (0.10 - 0.99):</label>
-            <input type="number" id="threshold-input" step="0.05" min="0.1" max="0.99" value="0.45">
+            <input type="number" id="threshold-input" step="0.05" min="0.1" max="0.99" value="0.40">
           </div>
         </div>
 
@@ -233,13 +233,19 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ object_key: key, force_reindex: true })
         });
-        const data = await res.json();
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { detail: text || `HTTP ${res.status} ${res.statusText}` };
+        }
         if (res.ok) {
           alert(`Indexed ${key}: ${data.faces_detected} faces found.`);
           loadR2Objects();
           updateHealth();
         } else {
-          alert(`Failed to index: ${data.detail}`);
+          alert(`Failed to index: ${data.detail || 'Unknown error'}`);
         }
       } catch (err) {
         alert('Error: ' + err.message);
@@ -265,7 +271,13 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prefix: prefix, force_reindex: false })
         });
-        const job = await res.json();
+        const text = await res.text();
+        let job;
+        try {
+          job = JSON.parse(text);
+        } catch {
+          job = { detail: text || `HTTP ${res.status} ${res.statusText}` };
+        }
         if (!res.ok) {
           statusText.textContent = `Batch initiation error: ${job.detail}`;
           btn.disabled = false;

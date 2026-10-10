@@ -235,14 +235,22 @@ class InsightFaceEngine(FaceEngine):
     Generates 512-dimensional unit-normalized embeddings.
     """
 
-    def __init__(self, model_name: str = "buffalo_l"):
-        self._model_name = model_name
-        self._version = f"insightface-{model_name}-v1.0"
+    def __init__(self, model_name: Optional[str] = None):
+        self._model_name = model_name or settings.insightface_model_name
+        self._version = f"insightface-{self._model_name}-v1.0"
         self._app = None
 
     def _get_app(self):
         if self._app is None:
             try:
+                import os
+                # Limit threads to keep memory footprint minimal on shared/free tier containers
+                os.environ["OMP_NUM_THREADS"] = "1"
+                os.environ["OPENBLAS_NUM_THREADS"] = "1"
+                os.environ["MKL_NUM_THREADS"] = "1"
+                os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+                os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
                 from insightface.app import FaceAnalysis
                 app = FaceAnalysis(
                     name=self._model_name,
@@ -270,8 +278,8 @@ class InsightFaceEngine(FaceEngine):
         app = self._get_app()
         orig_w, orig_h = image.size
 
-        # Cap processing resolution to max 1600px to keep RAM under 400MB on free tiers
-        max_dim = 1600
+        # Cap processing resolution to max 1280px to keep RAM under 200MB on free tiers
+        max_dim = 1280
         if max(orig_w, orig_h) > max_dim:
             scale = max_dim / float(max(orig_w, orig_h))
             new_w, new_h = int(orig_w * scale), int(orig_h * scale)
@@ -286,9 +294,12 @@ class InsightFaceEngine(FaceEngine):
         img_rgb = proc_img.convert("RGB")
         np_arr = np.array(img_rgb)
         img_bgr = np_arr[:, :, ::-1].copy()
+        del np_arr
 
         # Detect and extract faces
         raw_faces = app.get(img_bgr)
+        del img_bgr
+
         results: List[FaceDetectionResult] = []
 
         for idx, face in enumerate(raw_faces):
@@ -309,6 +320,9 @@ class InsightFaceEngine(FaceEngine):
                 )
             )
 
+        import gc
+        gc.collect()
+
         return results
 
 
@@ -328,7 +342,7 @@ def get_face_engine(engine_type: Optional[str] = None) -> FaceEngine:
     if selected == "insightface":
         try:
             import insightface  # noqa
-            engine = InsightFaceEngine()
+            engine = InsightFaceEngine(model_name=settings.insightface_model_name)
             _engines_cache["insightface"] = engine
             return engine
         except ImportError:
