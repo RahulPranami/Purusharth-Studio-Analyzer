@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Purusharth Selfie Matcher - Test Console</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 24px; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+    .title-group h1 { font-size: 24px; font-weight: 700; color: #fff; }
+    .title-group p { font-size: 14px; color: var(--text-muted); }
+    .badges { display: flex; gap: 10px; align-items: center; }
+    .badge { padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .badge-ok { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
+    .badge-warn { background: #78350f; color: #fde68a; border: 1px solid #d97706; }
+    .badge-info { background: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .card h2 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 13px; color: var(--text-muted); }
+    input[type="text"], input[type="number"], select {
+      background: #0f172a; border: 1px solid var(--border); color: #fff; border-radius: 6px; padding: 8px 12px; font-size: 14px;
+    }
+    input[type="file"] { color: var(--text-muted); font-size: 13px; }
+    button {
+      background: var(--accent); color: white; border: none; border-radius: 6px; padding: 10px 16px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.secondary { background: #475569; }
+    button.secondary:hover { background: #334155; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .progress-bar { background: #0f172a; border-radius: 999px; height: 12px; overflow: hidden; border: 1px solid var(--border); display: none; }
+    .progress-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
+    .table-container { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th, td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    th { background: #0f172a; position: sticky; top: 0; color: var(--text-muted); font-weight: 600; }
+    .match-results { display: flex; flex-direction: column; gap: 12px; }
+    .match-item {
+      background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .match-item .key { font-weight: 600; font-size: 14px; word-break: break-all; }
+    .match-item .score { font-size: 18px; font-weight: 700; color: var(--success); }
+    .match-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .dropzone {
+      border: 2px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; background: #0f172a; transition: border-color 0.2s;
+    }
+    .dropzone:hover { border-color: var(--accent); }
+    .status-msg { font-size: 13px; padding: 8px 12px; border-radius: 6px; display: none; }
+    .status-msg.success { background: #064e3b; color: #6ee7b7; display: block; }
+    .status-msg.error { background: #7f1d1d; color: #fca5a5; display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>Purusharth Selfie API - Test Dashboard</h1>
+        <p>Private Cloudflare R2 face indexer and selfie recognition test console</p>
+      </div>
+      <div class="badges">
+        <span id="badge-r2" class="badge badge-warn">R2 Checking...</span>
+        <span id="badge-db" class="badge badge-info">Indexed: 0</span>
+        <span id="badge-model" class="badge badge-info">Model: ...</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Left Column: R2 & Indexing Management -->
+      <div class="card">
+        <h2>1. Cloudflare R2 & Indexing</h2>
+        
+        <!-- Upload to R2 for quick testing -->
+        <div class="form-group">
+          <label>Upload Test Photo directly to R2 Bucket:</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="file" id="r2-upload-file" accept="image/jpeg,image/png,image/webp">
+            <button type="button" id="btn-upload-r2" class="secondary">Upload</button>
+          </div>
+          <div id="upload-status" class="status-msg"></div>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: flex-end;">
+          <div class="form-group" style="flex: 1;">
+            <label>Prefix Filter:</label>
+            <input type="text" id="prefix-filter" placeholder="e.g. photos/ or test-">
+          </div>
+          <button type="button" id="btn-refresh-r2">Refresh List</button>
+          <button type="button" id="btn-batch-index">Index All</button>
+        </div>
+
+        <div id="progress-container" class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div id="batch-status-text" style="font-size: 12px; color: var(--text-muted);"></div>
+
+        <div class="table-container">
+          <table id="r2-table">
+            <thead>
+              <tr>
+                <th>Object Key</th>
+                <th>Size</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="r2-table-body">
+              <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Click "Refresh List" to view R2 objects.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Right Column: Selfie Upload & Match -->
+      <div class="card">
+        <h2>2. Selfie Matching</h2>
+        
+        <div class="dropzone" id="selfie-dropzone" onclick="document.getElementById('selfie-file').click()">
+          <p id="selfie-label">Click or Drag & Drop Selfie Here (JPG, PNG, WebP)</p>
+          <input type="file" id="selfie-file" style="display: none;" accept="image/jpeg,image/png,image/webp">
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <div class="form-group" style="flex: 1;">
+            <label>Collection Scope:</label>
+            <input type="text" id="scope-input" value="default">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Similarity Threshold (0.10 - 0.99):</label>
+            <input type="number" id="threshold-input" step="0.05" min="0.1" max="0.99" value="0.45">
+          </div>
+        </div>
+
+        <button type="button" id="btn-match-selfie" style="width: 100%;">Find Matching Photos</button>
+        <div id="match-status" class="status-msg"></div>
+
+        <h3 style="font-size: 15px; margin-top: 8px;">Ranked Matches</h3>
+        <div class="match-results" id="match-results-container">
+          <p style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px;">
+            Upload a selfie and click "Find Matching Photos" to view candidate rankings.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function updateHealth() {
+      try {
+        const res = await fetch('/health');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const r2Badge = document.getElementById('badge-r2');
+        if (data.r2_connection === 'connected') {
+          r2Badge.className = 'badge badge-ok';
+          r2Badge.textContent = 'R2 Connected';
+        } else if (data.r2_configured) {
+          r2Badge.className = 'badge badge-warn';
+          r2Badge.textContent = 'R2 Configured (Unreachable)';
+        } else {
+          r2Badge.className = 'badge badge-warn';
+          r2Badge.textContent = 'R2 Not Configured';
+        }
+
+        document.getElementById('badge-db').textContent = `Indexed: ${data.indexed_images_count} (${data.total_faces_count} faces)`;
+        document.getElementById('badge-model').textContent = `Model: ${data.model_adapter}`;
+      } catch (err) {
+        console.error('Health update error:', err);
+      }
+    }
+
+    async function loadR2Objects() {
+      const prefix = document.getElementById('prefix-filter').value;
+      const tbody = document.getElementById('r2-table-body');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Loading...</td></tr>';
+      
+      try {
+        const res = await fetch(`/r2/objects?prefix=${encodeURIComponent(prefix)}&limit=100`);
+        if (!res.ok) {
+          const err = await res.json();
+          tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--danger);">${err.detail || 'Failed to load R2 objects'}</td></tr>`;
+          return;
+        }
+        const data = await res.json();
+        if (!data.objects || data.objects.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No objects found in bucket.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = '';
+        data.objects.forEach(obj => {
+          const tr = document.createElement('tr');
+          const kb = (obj.size_bytes / 1024).toFixed(1);
+          const statusBadge = obj.is_indexed
+            ? '<span style="color: var(--success); font-weight:600;">Indexed</span>'
+            : '<span style="color: var(--text-muted);">Unindexed</span>';
+          
+          tr.innerHTML = `
+            <td style="font-family: monospace;">${obj.key}</td>
+            <td>${kb} KB</td>
+            <td>${statusBadge}</td>
+            <td>
+              <button class="secondary" style="padding: 4px 8px; font-size: 11px;" onclick="indexSingleObject('${obj.key}')">Index</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--danger);">Network error listing objects</td></tr>`;
+      }
+    }
+
+    async function indexSingleObject(key) {
+      try {
+        const res = await fetch('/index/r2-object', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ object_key: key, force_reindex: true })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`Indexed ${key}: ${data.faces_detected} faces found.`);
+          loadR2Objects();
+          updateHealth();
+        } else {
+          alert(`Failed to index: ${data.detail}`);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function triggerBatchIndex() {
+      const prefix = document.getElementById('prefix-filter').value;
+      const btn = document.getElementById('btn-batch-index');
+      btn.disabled = true;
+
+      const progressContainer = document.getElementById('progress-container');
+      const progressFill = document.getElementById('progress-fill');
+      const statusText = document.getElementById('batch-status-text');
+
+      progressContainer.style.display = 'block';
+      progressFill.style.width = '0%';
+      statusText.textContent = 'Starting batch indexing job...';
+
+      try {
+        const res = await fetch('/index/r2-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prefix: prefix, force_reindex: false })
+        });
+        const job = await res.json();
+        if (!res.ok) {
+          statusText.textContent = `Batch initiation error: ${job.detail}`;
+          btn.disabled = false;
+          return;
+        }
+
+        // Poll job status
+        const poll = setInterval(async () => {
+          const pollRes = await fetch(`/jobs/${job.job_id}`);
+          if (!pollRes.ok) return;
+          const current = await pollRes.json();
+          
+          const total = current.total_items || 1;
+          const pct = Math.round((current.processed_items / total) * 100);
+          progressFill.style.width = `${pct}%`;
+          statusText.textContent = `Processed ${current.processed_items} of ${current.total_items} (${current.successful_items} succeeded, ${current.failed_items} failed)`;
+
+          if (current.status === 'completed' || current.status === 'failed') {
+            clearInterval(poll);
+            btn.disabled = false;
+            statusText.textContent = `Job finished (${current.status}): ${current.successful_items} indexed.`;
+            loadR2Objects();
+            updateHealth();
+          }
+        }, 1000);
+      } catch (err) {
+        statusText.textContent = 'Error triggering batch: ' + err.message;
+        btn.disabled = false;
+      }
+    }
+
+    // Direct Test Photo Upload to R2
+    document.getElementById('btn-upload-r2').addEventListener('click', async () => {
+      const fileInput = document.getElementById('r2-upload-file');
+      const status = document.getElementById('upload-status');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        status.className = 'status-msg error';
+        status.textContent = 'Please select a photo file to upload.';
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('key_prefix', 'test-photos/');
+
+      status.className = 'status-msg';
+      status.style.display = 'block';
+      status.textContent = 'Uploading to R2...';
+
+      try {
+        const res = await fetch('/test/upload-photo', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          status.className = 'status-msg success';
+          status.textContent = `Uploaded successfully as '${data.key}'`;
+          fileInput.value = '';
+          loadR2Objects();
+        } else {
+          status.className = 'status-msg error';
+          status.textContent = `Upload failed: ${data.detail}`;
+        }
+      } catch (err) {
+        status.className = 'status-msg error';
+        status.textContent = 'Network error: ' + err.message;
+      }
+    });
+
+    // Selfie Select & Auto-Analyze
+    const selfieInput = document.getElementById('selfie-file');
+    const selfieStatus = document.getElementById('match-status');
+    selfieInput.addEventListener('change', async () => {
+      if (selfieInput.files && selfieInput.files[0]) {
+        const file = selfieInput.files[0];
+        document.getElementById('selfie-label').textContent = `Selected: ${file.name}`;
+        
+        selfieStatus.className = 'status-msg';
+        selfieStatus.style.display = 'block';
+        selfieStatus.textContent = 'Analyzing selfie image quality & face detection...';
+
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await fetch('/selfie/analyze', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (res.ok) {
+            if (data.is_valid_selfie) {
+              const confPct = (data.faces[0].confidence * 100).toFixed(1);
+              selfieStatus.className = 'status-msg success';
+              selfieStatus.textContent = `Analyzed: 1 clear face detected (${confPct}% confidence). Ready to match!`;
+            } else if (data.faces_detected_count > 1) {
+              selfieStatus.className = 'status-msg';
+              selfieStatus.style.background = '#854d0e';
+              selfieStatus.style.color = '#fef08a';
+              selfieStatus.textContent = `Warning: ${data.faces_detected_count} faces detected in selfie. Search will use primary face.`;
+            } else {
+              selfieStatus.className = 'status-msg error';
+              selfieStatus.textContent = 'Warning: No face detected in this image. Please select a clearer selfie.';
+            }
+          } else {
+            selfieStatus.className = 'status-msg error';
+            selfieStatus.textContent = `Analysis error: ${data.detail}`;
+          }
+        } catch (err) {
+          selfieStatus.className = 'status-msg error';
+          selfieStatus.textContent = 'Failed to analyze selfie: ' + err.message;
+        }
+      }
+    });
+
+    document.getElementById('btn-match-selfie').addEventListener('click', async () => {
+      const status = document.getElementById('match-status');
+      const container = document.getElementById('match-results-container');
+      if (!selfieInput.files || selfieInput.files.length === 0) {
+        status.className = 'status-msg error';
+        status.textContent = 'Please choose a selfie image first.';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', selfieInput.files[0]);
+      formData.append('collection_scope', document.getElementById('scope-input').value);
+      formData.append('threshold', document.getElementById('threshold-input').value);
+
+      status.className = 'status-msg';
+      status.style.display = 'block';
+      status.textContent = 'Detecting face & searching vector index...';
+      container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Searching...</p>';
+
+      try {
+        const res = await fetch('/match/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (!res.ok) {
+          status.className = 'status-msg error';
+          status.textContent = data.detail || 'Matching failed.';
+          container.innerHTML = '';
+          return;
+        }
+
+        status.className = 'status-msg success';
+        status.textContent = `Extracted ${data.total_faces_in_query} face(s) in selfie. Found ${data.matched_photos_count} matching photo(s).`;
+
+        if (!data.top_matches || data.top_matches.length === 0) {
+          container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No photos matched the similarity threshold.</p>';
+          return;
+        }
+
+        container.innerHTML = '';
+        data.top_matches.forEach((m, idx) => {
+          const item = document.createElement('div');
+          item.className = 'match-item';
+          const simPct = (m.best_similarity * 100).toFixed(1);
+          item.innerHTML = `
+            <div>
+              <div class="key">#${idx + 1} &mdash; ${m.image_key}</div>
+              <div class="match-meta">Distance: ${m.min_distance} | Matched Faces in Photo: ${m.match_count}</div>
+            </div>
+            <div class="score">${simPct}%</div>
+          `;
+          container.appendChild(item);
+        });
+
+      } catch (err) {
+        status.className = 'status-msg error';
+        status.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    document.getElementById('btn-refresh-r2').addEventListener('click', loadR2Objects);
+    document.getElementById('btn-batch-index').addEventListener('click', triggerBatchIndex);
+
+    // Initial load
+    updateHealth();
+    loadR2Objects();
+  </script>
+</body>
+</html>
