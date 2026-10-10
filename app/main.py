@@ -102,13 +102,13 @@ if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
-@app.get("/", include_in_schema=False)
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 async def root():
     """Redirect or serve test UI."""
     return FileResponse(str(static_dir / "index.html"))
 
 
-@app.get("/ui", include_in_schema=False)
+@app.api_route("/ui", methods=["GET", "HEAD"], include_in_schema=False)
 async def test_ui():
     """Serve temporary test UI dashboard."""
     index_html = static_dir / "index.html"
@@ -117,7 +117,7 @@ async def test_ui():
     return FileResponse(str(index_html))
 
 
-@app.get("/health", response_model=HealthResponse, tags=["System"])
+@app.api_route("/health", methods=["GET", "HEAD"], response_model=HealthResponse, tags=["System"])
 async def health_check():
     """
     Check system health, index store counts, and Cloudflare R2 connectivity.
