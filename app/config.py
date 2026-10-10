@@ -2,8 +2,8 @@
 
 import json
 from pathlib import Path
-from typing import List, Optional
-from pydantic import Field, field_validator
+from typing import Any, List, Optional, Union
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -54,23 +54,27 @@ class Settings(BaseSettings):
     api_host: str = Field(default="0.0.0.0", alias="API_HOST")
     api_port: int = Field(default=8000, alias="API_PORT")
     environment: str = Field(default="development", alias="ENVIRONMENT")
-    cors_origins: List[str] = Field(
+    cors_origins_raw: Any = Field(
         default=["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:8000", "http://127.0.0.1:3000"],
         alias="CORS_ORIGINS",
     )
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value):
-        if isinstance(value, str):
-            value = value.strip()
-            if value.startswith("[") and value.endswith("]"):
+    @property
+    def cors_origins(self) -> List[str]:
+        val = self.cors_origins_raw
+        if isinstance(val, list):
+            return val
+        if isinstance(val, str):
+            val = val.strip()
+            if val == "*":
+                return ["*"]
+            if val.startswith("[") and val.endswith("]"):
                 try:
-                    return json.loads(value)
+                    return json.loads(val)
                 except Exception:
                     pass
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
-        return value
+            return [origin.strip() for origin in val.split(",") if origin.strip()]
+        return ["*"]
 
     @property
     def effective_account_id(self) -> str:
