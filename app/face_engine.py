@@ -244,8 +244,12 @@ class InsightFaceEngine(FaceEngine):
         if self._app is None:
             try:
                 from insightface.app import FaceAnalysis
-                app = FaceAnalysis(name=self._model_name, providers=["CPUExecutionProvider"])
-                app.prepare(ctx_id=0, det_size=(640, 640))
+                app = FaceAnalysis(
+                    name=self._model_name,
+                    allowed_modules=["detection", "recognition"],
+                    providers=["CPUExecutionProvider"],
+                )
+                app.prepare(ctx_id=-1, det_size=(640, 640))
                 self._app = app
             except Exception as e:
                 raise FaceEngineError(f"Failed to initialize InsightFace model: {e}") from e
@@ -264,8 +268,22 @@ class InsightFaceEngine(FaceEngine):
             raise FaceEngineError("Input must be a valid PIL Image.")
 
         app = self._get_app()
+        orig_w, orig_h = image.size
+
+        # Cap processing resolution to max 1600px to keep RAM under 400MB on free tiers
+        max_dim = 1600
+        if max(orig_w, orig_h) > max_dim:
+            scale = max_dim / float(max(orig_w, orig_h))
+            new_w, new_h = int(orig_w * scale), int(orig_h * scale)
+            proc_img = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
+            scale_x = orig_w / float(new_w)
+            scale_y = orig_h / float(new_h)
+        else:
+            proc_img = image
+            scale_x, scale_y = 1.0, 1.0
+
         # Convert PIL to BGR OpenCV ndarray
-        img_rgb = image.convert("RGB")
+        img_rgb = proc_img.convert("RGB")
         np_arr = np.array(img_rgb)
         img_bgr = np_arr[:, :, ::-1].copy()
 
@@ -275,7 +293,10 @@ class InsightFaceEngine(FaceEngine):
 
         for idx, face in enumerate(raw_faces):
             bbox = face.bbox
-            x1, y1, x2, y2 = [int(v) for v in bbox]
+            x1 = int(bbox[0] * scale_x)
+            y1 = int(bbox[1] * scale_y)
+            x2 = int(bbox[2] * scale_x)
+            y2 = int(bbox[3] * scale_y)
             w = max(1, x2 - x1)
             h = max(1, y2 - y1)
 
