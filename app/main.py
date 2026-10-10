@@ -74,6 +74,13 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing purusharth-selfie-api...")
     index_store.initialize()
     logger.info("Local SQLite index store initialized.")
+    try:
+        engine = get_face_engine()
+        if hasattr(engine, "_get_app"):
+            engine._get_app()
+            logger.info("Face engine warmed up successfully.")
+    except Exception as ex:
+        logger.warning("Could not warm up face engine during startup: %s", ex)
     yield
     logger.info("Shutting down purusharth-selfie-api...")
 

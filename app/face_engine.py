@@ -252,11 +252,16 @@ class InsightFaceEngine(FaceEngine):
                 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
                 from insightface.app import FaceAnalysis
-                app = FaceAnalysis(
-                    name=self._model_name,
-                    allowed_modules=["detection", "recognition"],
-                    providers=["CPUExecutionProvider"],
-                )
+                root_path = os.environ.get("INSIGHTFACE_ROOT")
+                kwargs = {
+                    "name": self._model_name,
+                    "allowed_modules": ["detection", "recognition"],
+                    "providers": ["CPUExecutionProvider"],
+                }
+                if root_path and os.path.exists(root_path):
+                    kwargs["root"] = root_path
+
+                app = FaceAnalysis(**kwargs)
                 app.prepare(ctx_id=-1, det_size=(640, 640))
                 self._app = app
             except Exception as e:

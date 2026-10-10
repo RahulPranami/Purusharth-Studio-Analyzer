@@ -17,21 +17,30 @@ RUN pip install --no-cache-dir --upgrade pip
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Limit thread pools to minimize RAM footprint on low-resource free containers
+# Limit thread pools and configure explicit model location
 ENV OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     MKL_NUM_THREADS=1 \
     VECLIB_MAXIMUM_THREADS=1 \
-    NUMEXPR_NUM_THREADS=1
+    NUMEXPR_NUM_THREADS=1 \
+    INSIGHTFACE_ROOT=/app/models/insightface
 
-# Pre-download InsightFace buffalo_s model during build (<200MB RAM)
-RUN python -c "from insightface.app import FaceAnalysis; app = FaceAnalysis(name='buffalo_s', allowed_modules=['detection', 'recognition']); app.prepare(ctx_id=-1, det_size=(640,640))"
+# Pre-download InsightFace buffalo_s model to /app/models/insightface during build
+RUN python -c "from insightface.app import FaceAnalysis; app = FaceAnalysis(name='buffalo_s', root='/app/models/insightface', allowed_modules=['detection', 'recognition']); app.prepare(ctx_id=-1, det_size=(640,640))"
+
+# Prune unused 143MB landmark (1k3d68.onnx) and auxiliary models so ONNX doesn't load them into RAM
+RUN rm -f /app/models/insightface/models/buffalo_s/1k3d68.onnx \
+          /app/models/insightface/models/buffalo_s/2d106det.onnx \
+          /app/models/insightface/models/buffalo_s/genderage.onnx
+
+# Ensure permissions for any execution user
+RUN chmod -R 777 /app/models
 
 # Copy application source
 COPY . .
 
-# Create volume mount directory for SQLite index
-RUN mkdir -p /app/data
+# Create volume mount directory for SQLite index with write permissions
+RUN mkdir -p /app/data && chmod -R 777 /app/data
 
 EXPOSE 8000
 
